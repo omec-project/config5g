@@ -19,6 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ConfigServiceClient interface {
 	GetNetworkSlice(ctx context.Context, in *NetworkSliceRequest, opts ...grpc.CallOption) (*NetworkSliceResponse, error)
+	NetworkSliceSubscribe(ctx context.Context, in *NetworkSliceRequest, opts ...grpc.CallOption) (ConfigService_NetworkSliceSubscribeClient, error)
 }
 
 type configServiceClient struct {
@@ -38,11 +39,44 @@ func (c *configServiceClient) GetNetworkSlice(ctx context.Context, in *NetworkSl
 	return out, nil
 }
 
+func (c *configServiceClient) NetworkSliceSubscribe(ctx context.Context, in *NetworkSliceRequest, opts ...grpc.CallOption) (ConfigService_NetworkSliceSubscribeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ConfigService_ServiceDesc.Streams[0], "/sdcoreConfig.ConfigService/NetworkSliceSubscribe", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &configServiceNetworkSliceSubscribeClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ConfigService_NetworkSliceSubscribeClient interface {
+	Recv() (*NetworkSliceResponse, error)
+	grpc.ClientStream
+}
+
+type configServiceNetworkSliceSubscribeClient struct {
+	grpc.ClientStream
+}
+
+func (x *configServiceNetworkSliceSubscribeClient) Recv() (*NetworkSliceResponse, error) {
+	m := new(NetworkSliceResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ConfigServiceServer is the server API for ConfigService service.
 // All implementations must embed UnimplementedConfigServiceServer
 // for forward compatibility
 type ConfigServiceServer interface {
 	GetNetworkSlice(context.Context, *NetworkSliceRequest) (*NetworkSliceResponse, error)
+	NetworkSliceSubscribe(*NetworkSliceRequest, ConfigService_NetworkSliceSubscribeServer) error
 	mustEmbedUnimplementedConfigServiceServer()
 }
 
@@ -52,6 +86,9 @@ type UnimplementedConfigServiceServer struct {
 
 func (UnimplementedConfigServiceServer) GetNetworkSlice(context.Context, *NetworkSliceRequest) (*NetworkSliceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNetworkSlice not implemented")
+}
+func (UnimplementedConfigServiceServer) NetworkSliceSubscribe(*NetworkSliceRequest, ConfigService_NetworkSliceSubscribeServer) error {
+	return status.Errorf(codes.Unimplemented, "method NetworkSliceSubscribe not implemented")
 }
 func (UnimplementedConfigServiceServer) mustEmbedUnimplementedConfigServiceServer() {}
 
@@ -84,6 +121,27 @@ func _ConfigService_GetNetworkSlice_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ConfigService_NetworkSliceSubscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(NetworkSliceRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ConfigServiceServer).NetworkSliceSubscribe(m, &configServiceNetworkSliceSubscribeServer{stream})
+}
+
+type ConfigService_NetworkSliceSubscribeServer interface {
+	Send(*NetworkSliceResponse) error
+	grpc.ServerStream
+}
+
+type configServiceNetworkSliceSubscribeServer struct {
+	grpc.ServerStream
+}
+
+func (x *configServiceNetworkSliceSubscribeServer) Send(m *NetworkSliceResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // ConfigService_ServiceDesc is the grpc.ServiceDesc for ConfigService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -96,6 +154,12 @@ var ConfigService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ConfigService_GetNetworkSlice_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "proto/config.proto",
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "NetworkSliceSubscribe",
+			Handler:       _ConfigService_NetworkSliceSubscribe_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "config.proto",
 }
