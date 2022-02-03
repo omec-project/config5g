@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2021 Open Networking Foundation <info@opennetworking.org>
 //
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+//
 
 package logger
 
@@ -17,10 +17,10 @@ import (
 )
 
 var (
-	log               *logrus.Logger
-	CfgLog            *logrus.Entry
-	InitLog           *logrus.Entry
-	GrpcLog           *logrus.Entry
+	log     *logrus.Logger
+	CfgLog  *logrus.Entry
+	InitLog *logrus.Entry
+	GrpcLog *logrus.Entry
 )
 
 func init() {
