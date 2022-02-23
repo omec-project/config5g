@@ -1,15 +1,20 @@
 <!--
-SPDX-License-Identifier: Apache-2.0
 Copyright 2021-present Open Networking Foundation
+
+SPDX-License-Identifier: Apache-2.0
 -->
+# Config Module 
+Configuration module is used by all 5G network functions to get the configuration updates from webconsole.
+This module connects to configuration service using grpc stream. The same module is used by webconsole to
+push the configuration updates to Network Functions through grpc.
+
 
 # Protobuf for sd core config grpc server & client
 
 The config.proto file contains the messages and methods to be used by the
-grpc server and client for exchange of config info.
-To add updates, just change the file and run in webconsole folder the following
-command : 
-    make -f Makefile_docker docker-build
+grpc server and client for exchange of config info. Changes in the config5g
+repository are tagged so that consumers can used tagged versions of client/server.
+
 
 The Dockerfile contains the commands to generate the golang files from this config.proto. 
 Run following commands in the proto folder 

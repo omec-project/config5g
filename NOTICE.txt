@@ -1,0 +1,8 @@
+config5g
+Copyright 2021 Open Networking Foundation
+SPDX-License-Identifier: Apache-2.0
+
+Some part of this work is taken from free5GC (https://www.free5gc.org/) project.
+At the time of forking, no copyright statements were found in the free5GC files 
+or directories.
+Copyright 2019 free5GC.org.
