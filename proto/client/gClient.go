@@ -95,10 +95,10 @@ var retryPolicy = `{
 func GetConnection(host string) (conn *grpc.ClientConn, err error) {
 	/* get connection */
 	logger.GrpcLog.Infoln("Dial grpc connection - ", host)
-	bd := 100 * time.Millisecond
+	bd := 1 * time.Second
 	mltpr := 1.0
-	jitter := 0.0
-	MaxDelay := 2 * time.Second
+	jitter := 0.2
+	MaxDelay := 5 * time.Second
 	bc := backoff.Config{BaseDelay: bd, Multiplier: mltpr, Jitter: jitter, MaxDelay: MaxDelay}
 
 	crt := grpc.ConnectParams{Backoff: bc}
