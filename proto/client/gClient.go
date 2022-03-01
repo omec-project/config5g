@@ -13,6 +13,7 @@ import (
 	"github.com/omec-project/config5g/logger"
 	protos "github.com/omec-project/config5g/proto/sdcoreConfig"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/keepalive"
 )
@@ -94,7 +95,14 @@ var retryPolicy = `{
 func GetConnection(host string) (conn *grpc.ClientConn, err error) {
 	/* get connection */
 	logger.GrpcLog.Infoln("Dial grpc connection - ", host)
-	conn, err = grpc.Dial(host, grpc.WithInsecure(), grpc.WithKeepaliveParams(kacp), grpc.WithDefaultServiceConfig(retryPolicy))
+	bd := 100 * time.Millisecond
+	mltpr := 1.0
+	jitter := 0.0
+	MaxDelay := 2 * time.Second
+	bc := backoff.Config{BaseDelay: bd, Multiplier: mltpr, Jitter: jitter, MaxDelay: MaxDelay}
+
+	crt := grpc.ConnectParams{Backoff: bc}
+	conn, err = grpc.Dial(host, grpc.WithInsecure(), grpc.WithKeepaliveParams(kacp), grpc.WithDefaultServiceConfig(retryPolicy), grpc.WithConnectParams(crt))
 	if err != nil {
 		logger.GrpcLog.Errorln("grpc dial err: ", err)
 		return nil, err
