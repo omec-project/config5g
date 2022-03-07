@@ -1,7 +1,6 @@
 // SPDX-FileCopyrightText: 2021 Open Networking Foundation <info@opennetworking.org>
 //
 // SPDX-License-Identifier: Apache-2.0
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 package client
 
@@ -49,7 +48,7 @@ type ConfClient interface {
 	// channel is created on which subscription is done.
 	// On Receiving Configuration from ConfigServer, this api publishes
 	// on created channel and returns the channel
-	PublishOnConfigChange() chan *protos.NetworkSliceResponse
+	PublishOnConfigChange(bool) chan *protos.NetworkSliceResponse
 
 	//returns grpc connection object
 	GetConfigClientConn() *grpc.ClientConn
@@ -58,20 +57,20 @@ type ConfClient interface {
 	subscribeToConfigPod(commChan chan *protos.NetworkSliceResponse)
 }
 
-func ConnectToConfigServer(host string, mdataFlag bool) ConfClient {
+//This API is added to control metadata from NF Clients
+func ConnectToConfigServer(host string) ConfClient {
 	confClient := CreateChannel(host, 10000)
 	if confClient == nil {
 		logger.GrpcLog.Errorln("create grpc channel to config pod failed")
 		return nil
 	}
-	confClient.(*ConfigClient).MetadataRequested = mdataFlag
 	return confClient
 }
 
-func (confClient *ConfigClient) PublishOnConfigChange() chan *protos.NetworkSliceResponse {
+func (confClient *ConfigClient) PublishOnConfigChange(mdataFlag bool) chan *protos.NetworkSliceResponse {
+	confClient.MetadataRequested = mdataFlag
 	commChan := make(chan *protos.NetworkSliceResponse)
 	go confClient.subscribeToConfigPod(commChan)
-	//dialOptions := []grpc.DialOption{grpc.WithInsecure(), grpc.WithKeepaliveParams(kacp), grpc.WithDefaultServiceConfig(retryPolicy), grpc.WithConnectParams(crt)}
 	return commChan
 }
 
@@ -127,15 +126,17 @@ var retryPolicy = `{
 func newClientConnection(host string) (conn *grpc.ClientConn, err error) {
 	/* get connection */
 	logger.GrpcLog.Infoln("Dial grpc connection - ", host)
-	bd := 100 * time.Millisecond
+
+	bd := 1 * time.Second
 	mltpr := 1.0
-	jitter := 0.0
-	MaxDelay := 2 * time.Second
+	jitter := 0.2
+	MaxDelay := 5 * time.Second
 	bc := backoff.Config{BaseDelay: bd, Multiplier: mltpr, Jitter: jitter, MaxDelay: MaxDelay}
 
 	crt := grpc.ConnectParams{Backoff: bc}
 	dialOptions := []grpc.DialOption{grpc.WithInsecure(), grpc.WithKeepaliveParams(kacp), grpc.WithDefaultServiceConfig(retryPolicy), grpc.WithConnectParams(crt)}
 	conn, err = grpc.Dial(host, dialOptions...)
+
 	if err != nil {
 		logger.GrpcLog.Errorln("grpc dial err: ", err)
 		return nil, err
@@ -147,6 +148,7 @@ func newClientConnection(host string) (conn *grpc.ClientConn, err error) {
 func (confClient *ConfigClient) GetConfigClientConn() *grpc.ClientConn {
 	return confClient.Conn
 }
+
 func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.NetworkSliceResponse) {
 	logger.GrpcLog.Infoln("subscribeToConfigPod ")
 	myid := os.Getenv("HOSTNAME")
