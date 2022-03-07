@@ -7,15 +7,18 @@ package client
 
 import (
 	context "context"
-	"github.com/omec-project/config5g/logger"
-	protos "github.com/omec-project/config5g/proto/sdcoreConfig"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
-	"google.golang.org/grpc/keepalive"
 	"math/rand"
 	"os"
 	"time"
+
+	"github.com/omec-project/config5g/logger"
+	protos "github.com/omec-project/config5g/proto/sdcoreConfig"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
+	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/keepalive"
 )
+
 var selfRestartCounter uint32
 var configPodRestartCounter uint32 = 0
 
@@ -36,32 +39,63 @@ type Nssai struct {
 }
 
 type ConfigClient struct {
-	Client  protos.ConfigServiceClient
-	Conn    *grpc.ClientConn
-	Version string
+	Client            protos.ConfigServiceClient
+	Conn              *grpc.ClientConn
+	Version           string
+	MetadataRequested bool
+}
+
+type ConfClient interface {
+	// channel is created on which subscription is done.
+	// On Receiving Configuration from ConfigServer, this api publishes
+	// on created channel and returns the channel
+	PublishOnConfigChange() chan *protos.NetworkSliceResponse
+
+	//returns grpc connection object
+	GetConfigClientConn() *grpc.ClientConn
+
+	//Client Subscribing channel to ConfigPod to receive configuration
+	subscribeToConfigPod(commChan chan *protos.NetworkSliceResponse)
+}
+
+func ConnectToConfigServer(host string, mdataFlag bool) ConfClient {
+	confClient := CreateChannel(host, 10000)
+	if confClient == nil {
+		logger.GrpcLog.Errorln("create grpc channel to config pod failed")
+		return nil
+	}
+	confClient.(*ConfigClient).MetadataRequested = mdataFlag
+	return confClient
+}
+
+func (confClient *ConfigClient) PublishOnConfigChange() chan *protos.NetworkSliceResponse {
+	commChan := make(chan *protos.NetworkSliceResponse)
+	go confClient.subscribeToConfigPod(commChan)
+	//dialOptions := []grpc.DialOption{grpc.WithInsecure(), grpc.WithKeepaliveParams(kacp), grpc.WithDefaultServiceConfig(retryPolicy), grpc.WithConnectParams(crt)}
+	return commChan
 }
 
 // pass structr which has configChangeUpdate interface
 func ConfigWatcher() chan *protos.NetworkSliceResponse {
 	//var confClient *gClient.ConfigClient
 	//TODO: use port from configmap.
-	confClient, err := CreateChannel("webui:9876", 10000)
-	if err != nil {
-		logger.GrpcLog.Errorf("create grpc channel to config pod failed. : ", err)
+	confClient := CreateChannel("webui:9876", 10000)
+	if confClient == nil {
+		logger.GrpcLog.Errorf("create grpc channel to config pod failed")
 		return nil
 	}
 	commChan := make(chan *protos.NetworkSliceResponse)
-	go subscribeToConfigPod(confClient, commChan)
+	go confClient.subscribeToConfigPod(commChan)
 	return commChan
 }
 
-func CreateChannel(host string, timeout uint32) (*ConfigClient, error) {
+func CreateChannel(host string, timeout uint32) ConfClient {
 	logger.GrpcLog.Infoln("create config client")
 	// Second, check to see if we can reuse the gRPC connection for a new P4RT client
-	conn, err := GetConnection(host)
+	conn, err := newClientConnection(host)
 	if err != nil {
-		logger.GrpcLog.Errorf("grpc connection failed")
-		return nil, err
+		logger.GrpcLog.Errorf("grpc connection failed %v", err)
+		return nil
 	}
 
 	client := &ConfigClient{
@@ -69,7 +103,7 @@ func CreateChannel(host string, timeout uint32) (*ConfigClient, error) {
 		Conn:   conn,
 	}
 
-	return client, nil
+	return client
 }
 
 var kacp = keepalive.ClientParameters{
@@ -90,10 +124,18 @@ var retryPolicy = `{
 			  "RetryableStatusCodes": [ "UNAVAILABLE" ]
 		  }}]}`
 
-func GetConnection(host string) (conn *grpc.ClientConn, err error) {
+func newClientConnection(host string) (conn *grpc.ClientConn, err error) {
 	/* get connection */
 	logger.GrpcLog.Infoln("Dial grpc connection - ", host)
-	conn, err = grpc.Dial(host, grpc.WithInsecure(), grpc.WithKeepaliveParams(kacp), grpc.WithDefaultServiceConfig(retryPolicy))
+	bd := 100 * time.Millisecond
+	mltpr := 1.0
+	jitter := 0.0
+	MaxDelay := 2 * time.Second
+	bc := backoff.Config{BaseDelay: bd, Multiplier: mltpr, Jitter: jitter, MaxDelay: MaxDelay}
+
+	crt := grpc.ConnectParams{Backoff: bc}
+	dialOptions := []grpc.DialOption{grpc.WithInsecure(), grpc.WithKeepaliveParams(kacp), grpc.WithDefaultServiceConfig(retryPolicy), grpc.WithConnectParams(crt)}
+	conn, err = grpc.Dial(host, dialOptions...)
 	if err != nil {
 		logger.GrpcLog.Errorln("grpc dial err: ", err)
 		return nil, err
@@ -102,61 +144,64 @@ func GetConnection(host string) (conn *grpc.ClientConn, err error) {
 	return conn, err
 }
 
-func subscribeToConfigPod(confClient *ConfigClient, commChan chan *protos.NetworkSliceResponse) {
+func (confClient *ConfigClient) GetConfigClientConn() *grpc.ClientConn {
+	return confClient.Conn
+}
+func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.NetworkSliceResponse) {
 	logger.GrpcLog.Infoln("subscribeToConfigPod ")
 	myid := os.Getenv("HOSTNAME")
-    var stream protos.ConfigService_NetworkSliceSubscribeClient
-    for {
-        if stream == nil {
-            status := confClient.Conn.GetState()
-            var err error
-            if status == connectivity.Ready {
-	            logger.GrpcLog.Infoln("connectivity ready ")
-                rreq := &protos.NetworkSliceRequest{RestartCounter: selfRestartCounter, ClientId: myid}
-                if stream, err = confClient.Client.NetworkSliceSubscribe(context.Background(), rreq); err != nil {
-                    logger.GrpcLog.Errorf("Failed to subscribe: %v", err)
-                    time.Sleep(time.Second * 5)
-                    // Retry on failure
-                    continue
-                }
-            } else {
-                //logger.GrpcLog.Errorf("Connectivity status not ready")
-                continue
-            }
-        }
-        rsp, err := stream.Recv()
-        if err != nil {
-            logger.GrpcLog.Errorf("Failed to receive message: %v", err)
-            // Clearing the stream will force the client to resubscribe on next iteration
-            stream = nil
-            time.Sleep(time.Second * 5)
-            // Retry on failure
-            continue
-        }
+	var stream protos.ConfigService_NetworkSliceSubscribeClient
+	for {
+		if stream == nil {
+			status := confClient.Conn.GetState()
+			var err error
+			if status == connectivity.Ready {
+				logger.GrpcLog.Infoln("connectivity ready ")
+				rreq := &protos.NetworkSliceRequest{RestartCounter: selfRestartCounter, ClientId: myid, MetadataRequested: confClient.MetadataRequested}
+				if stream, err = confClient.Client.NetworkSliceSubscribe(context.Background(), rreq); err != nil {
+					logger.GrpcLog.Errorf("Failed to subscribe: %v", err)
+					time.Sleep(time.Second * 5)
+					// Retry on failure
+					continue
+				}
+			} else {
+				//logger.GrpcLog.Errorf("Connectivity status not ready")
+				continue
+			}
+		}
+		rsp, err := stream.Recv()
+		if err != nil {
+			logger.GrpcLog.Errorf("Failed to receive message: %v", err)
+			// Clearing the stream will force the client to resubscribe on next iteration
+			stream = nil
+			time.Sleep(time.Second * 5)
+			// Retry on failure
+			continue
+		}
 
-	    logger.GrpcLog.Infoln("stream msg recieved ")
-        logger.GrpcLog.Debugf("#Network Slices %v, RC of configpod %v ", len(rsp.NetworkSlice), rsp.RestartCounter)
-        if configPodRestartCounter == 0 || (configPodRestartCounter == rsp.RestartCounter) {
-            // first time connection or config update
-            configPodRestartCounter = rsp.RestartCounter
-            if len(rsp.NetworkSlice) > 0 {
-                // always carries full config copy
-                logger.GrpcLog.Infoln("First time config Received ", rsp)
-                commChan <- rsp
-            } else if rsp.ConfigUpdated == 1 {
-                // config delete , all slices deleted
-                logger.GrpcLog.Infoln("Complete config deleted ")
-                commChan <- rsp
-            }
-        } else if len(rsp.NetworkSlice) > 0 {
-            logger.GrpcLog.Errorf("Config received after config Pod restart")
-            //config received after config pod restart
-            configPodRestartCounter = rsp.RestartCounter
-            commChan <- rsp
-        } else {
-            logger.GrpcLog.Errorf("Config Pod is restarted and no config received")
-        }
-    }
+		logger.GrpcLog.Infoln("stream msg recieved ")
+		logger.GrpcLog.Debugf("#Network Slices %v, RC of configpod %v ", len(rsp.NetworkSlice), rsp.RestartCounter)
+		if configPodRestartCounter == 0 || (configPodRestartCounter == rsp.RestartCounter) {
+			// first time connection or config update
+			configPodRestartCounter = rsp.RestartCounter
+			if len(rsp.NetworkSlice) > 0 {
+				// always carries full config copy
+				logger.GrpcLog.Infoln("First time config Received ", rsp)
+				commChan <- rsp
+			} else if rsp.ConfigUpdated == 1 {
+				// config delete , all slices deleted
+				logger.GrpcLog.Infoln("Complete config deleted ")
+				commChan <- rsp
+			}
+		} else if len(rsp.NetworkSlice) > 0 {
+			logger.GrpcLog.Errorf("Config received after config Pod restart")
+			//config received after config pod restart
+			configPodRestartCounter = rsp.RestartCounter
+			commChan <- rsp
+		} else {
+			logger.GrpcLog.Errorf("Config Pod is restarted and no config received")
+		}
+	}
 }
 func readConfigInLoop(confClient *ConfigClient, commChan chan *protos.NetworkSliceResponse) {
 	myid := os.Getenv("HOSTNAME")
@@ -166,7 +211,7 @@ func readConfigInLoop(confClient *ConfigClient, commChan chan *protos.NetworkSli
 		case <-configReadTimeout.C:
 			status := confClient.Conn.GetState()
 			if status == connectivity.Ready {
-				rreq := &protos.NetworkSliceRequest{RestartCounter: selfRestartCounter, ClientId: myid}
+				rreq := &protos.NetworkSliceRequest{RestartCounter: selfRestartCounter, ClientId: myid, MetadataRequested: confClient.MetadataRequested}
 				rsp, err := confClient.Client.GetNetworkSlice(context.Background(), rreq)
 				if err != nil {
 					logger.GrpcLog.Errorln("read Network Slice config from webconsole failed : ", err)
@@ -199,4 +244,3 @@ func readConfigInLoop(confClient *ConfigClient, commChan chan *protos.NetworkSli
 		}
 	}
 }
-
