@@ -11,15 +11,15 @@ import (
 	formatter "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/sirupsen/logrus"
 
-	"github.com/free5gc/logger_conf"
-	"github.com/free5gc/logger_util"
+	"github.com/omec-project/logger_conf"
+	"github.com/omec-project/logger_util"
 )
 
 var (
-	log               *logrus.Logger
-	CfgLog            *logrus.Entry
-	InitLog           *logrus.Entry
-	GrpcLog           *logrus.Entry
+	log     *logrus.Logger
+	CfgLog  *logrus.Entry
+	InitLog *logrus.Entry
+	GrpcLog *logrus.Entry
 )
 
 func init() {
