@@ -40,6 +40,8 @@ type Nssai struct {
 type ConfigClient struct {
 	Client            protos.ConfigServiceClient
 	Conn              *grpc.ClientConn
+	Channel           chan *protos.NetworkSliceResponse
+	Host              string
 	Version           string
 	MetadataRequested bool
 }
@@ -70,6 +72,7 @@ func ConnectToConfigServer(host string) ConfClient {
 func (confClient *ConfigClient) PublishOnConfigChange(mdataFlag bool) chan *protos.NetworkSliceResponse {
 	confClient.MetadataRequested = mdataFlag
 	commChan := make(chan *protos.NetworkSliceResponse)
+	confClient.Channel = commChan
 	go confClient.subscribeToConfigPod(commChan)
 	return commChan
 }
@@ -100,6 +103,7 @@ func CreateChannel(host string, timeout uint32) ConfClient {
 	client := &ConfigClient{
 		Client: protos.NewConfigServiceClient(conn),
 		Conn:   conn,
+		Host:   host,
 	}
 
 	return client
@@ -166,6 +170,10 @@ func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.Netwo
 					// Retry on failure
 					continue
 				}
+			} else if status == connectivity.Idle {
+				logger.GrpcLog.Errorf("Connectivity status idle, trying to connect again")
+				confClient.Conn.Connect()
+				continue
 			} else {
 				//logger.GrpcLog.Errorf("Connectivity status not ready")
 				continue
