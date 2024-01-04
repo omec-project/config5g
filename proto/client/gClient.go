@@ -59,7 +59,7 @@ type ConfClient interface {
 	subscribeToConfigPod(commChan chan *protos.NetworkSliceResponse)
 }
 
-//This API is added to control metadata from NF Clients
+// This API is added to control metadata from NF Clients
 func ConnectToConfigServer(host string) ConfClient {
 	confClient := CreateChannel(host, 10000)
 	if confClient == nil {
@@ -172,7 +172,6 @@ func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.Netwo
 				}
 			} else if status == connectivity.Idle {
 				logger.GrpcLog.Errorf("Connectivity status idle, trying to connect again")
-				confClient.Conn.Connect()
 				continue
 			} else {
 				//logger.GrpcLog.Errorf("Connectivity status not ready")
