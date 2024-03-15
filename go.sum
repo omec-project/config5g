@@ -52,8 +52,8 @@ github.com/omec-project/logger_conf v1.1.1 h1:qo0cF5gnPfth8wy+I/QjiOx+F5jB6h4GLS
 github.com/omec-project/logger_conf v1.1.1/go.mod h1:2EwoAXjOcRTweseN+ogWifJvjocEKjz3kxRaIC4I88g=
 github.com/omec-project/logger_util v1.2.0 h1:Wtx6skInAPqSic0b97QtJcs+xHDh5798MY2WRrnUz3s=
 github.com/omec-project/logger_util v1.2.0/go.mod h1:LRHlDJdCqVjOxYvYslRryj0DFUNtxQkgxEiQ7fSCoPk=
-github.com/omec-project/util v1.0.13-0.20240207024358-eb30f7e970e8 h1:xjfHzmCE5l0JrSPJ56YEeGH9ZP+u6z6zV0atnQn/MEI=
-github.com/omec-project/util v1.0.13-0.20240207024358-eb30f7e970e8/go.mod h1:Cn9P57qYFiEu0ZXti8imODsJIXVGqnqhP40MwbVbo3g=
+github.com/omec-project/util v1.0.13 h1:50ghFbWo7aqhqIknC6KDPWmkht0tP1v2wjpIdcWVXKg=
+github.com/omec-project/util v1.0.13/go.mod h1:Cn9P57qYFiEu0ZXti8imODsJIXVGqnqhP40MwbVbo3g=
 github.com/pelletier/go-toml/v2 v2.0.8 h1:0ctb6s9mE31h0/lhu+J6OPmVeDxJn+kYnJc2jZR9tGQ=
 github.com/pelletier/go-toml/v2 v2.0.8/go.mod h1:vuYfssBdrU2XDZ9bYydBu6t+6a6PYNcZljzZR9VXg+4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
