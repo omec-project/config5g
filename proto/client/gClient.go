@@ -142,7 +142,6 @@ func newClientConnection(host string) (conn *grpc.ClientConn, err error) {
 	crt := grpc.ConnectParams{Backoff: bc}
 	dialOptions := []grpc.DialOption{grpc.WithInsecure(), grpc.WithKeepaliveParams(kacp), grpc.WithDefaultServiceConfig(retryPolicy), grpc.WithConnectParams(crt)}
 	conn, err = grpc.Dial(host, dialOptions...)
-
 	if err != nil {
 		logger.GrpcLog.Errorln("grpc dial err: ", err)
 		return nil, err
