@@ -9,10 +9,9 @@ import (
 	"time"
 
 	formatter "github.com/antonfisher/nested-logrus-formatter"
-	"github.com/sirupsen/logrus"
-
 	"github.com/omec-project/logger_conf"
 	"github.com/omec-project/logger_util"
+	"github.com/sirupsen/logrus"
 )
 
 var (
