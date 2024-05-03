@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
-# Copyright 2024 Canonical Ltd.
+# Copyright 2024 Intel Corporation
 
 name: Main workflow
 
@@ -24,7 +24,7 @@ jobs:
       - name: Build
         run: go build ./...
 
-  unit-tests:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,9 +33,12 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
-      - name: Unit tests
-        run: go test ./...
-  
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v5.1.0
+        with:
+          version: latest
+          args: -v --config ./.golangci.yml
+
   license-check:
     runs-on: ubuntu-latest
     steps:
@@ -53,8 +56,8 @@ jobs:
         uses: fossa-contrib/fossa-action@v3
         with:
           fossa-api-key: 0c3bbcdf20e157bbd487dae173751b28
-  lint:
-    name: lint
+
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -63,8 +66,5 @@ jobs:
         with:
           go-version-file: 'go.mod'
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v5.1.0
-        with:
-          version: latest
-          args: -v --config ./.golangci.yml
+      - name: Unit tests
+        run: go test ./...
