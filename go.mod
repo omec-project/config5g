@@ -8,7 +8,7 @@ require (
 	github.com/omec-project/logger_util v1.2.0
 	github.com/sirupsen/logrus v1.9.3
 	google.golang.org/grpc v1.63.2
-	google.golang.org/protobuf v1.34.0
+	google.golang.org/protobuf v1.34.1
 )
 
 require (
