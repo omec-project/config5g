@@ -9,8 +9,8 @@ import (
 	"time"
 
 	formatter "github.com/antonfisher/nested-logrus-formatter"
-	"github.com/omec-project/logger_conf"
-	"github.com/omec-project/logger_util"
+	"github.com/omec-project/util/logger"
+	"github.com/omec-project/util/logger_conf"
 	"github.com/sirupsen/logrus"
 )
 
@@ -33,12 +33,12 @@ func init() {
 		FieldsOrder:     []string{"component", "category"},
 	}
 
-	free5gcLogHook, err := logger_util.NewFileHook(logger_conf.Free5gcLogFile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o666)
+	free5gcLogHook, err := logger.NewFileHook(logger_conf.Free5gcLogFile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o666)
 	if err == nil {
 		log.Hooks.Add(free5gcLogHook)
 	}
 
-	selfLogHook, err := logger_util.NewFileHook(logger_conf.NfLogDir+"nssf.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o666)
+	selfLogHook, err := logger.NewFileHook(logger_conf.NfLogDir+"nssf.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0o666)
 	if err == nil {
 		log.Hooks.Add(selfLogHook)
 	}
