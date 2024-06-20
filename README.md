@@ -4,6 +4,7 @@ Copyright 2021-present Open Networking Foundation
 -->
 [![Go Report Card](https://goreportcard.com/badge/github.com/omec-project/config5g)](https://goreportcard.com/report/github.com/omec-project/config5g)
 
+
 # Protobuf for sd core config grpc server & client
 
 The config.proto file contains the messages and methods to be used by the
