@@ -1,9 +1,10 @@
-module github.com/omec-project/config5g
+module github.com/yeastengine/config5g
 
 go 1.21
 
 require (
 	github.com/antonfisher/nested-logrus-formatter v1.3.1
+	github.com/omec-project/config5g v1.4.1
 	github.com/omec-project/util v1.1.0
 	github.com/sirupsen/logrus v1.9.3
 	google.golang.org/grpc v1.64.0
