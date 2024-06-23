@@ -2,7 +2,7 @@
 SPDX-License-Identifier: Apache-2.0
 Copyright 2021-present Open Networking Foundation
 -->
-[![Go Report Card](https://goreportcard.com/badge/github.com/omec-project/config5g)](https://goreportcard.com/report/github.com/omec-project/config5g)
+[![Go Report Card](https://goreportcard.com/badge/github.com/yeastengine/config5g)](https://goreportcard.com/report/github.com/yeastengine/config5g)
 
 # Protobuf for sd core config grpc server & client
 
