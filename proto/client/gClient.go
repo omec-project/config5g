@@ -160,8 +160,9 @@ func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.Netwo
 	logger.GrpcLog.Infoln("subscribeToConfigPod ")
 	myid := os.Getenv("HOSTNAME")
 	var stream protos.ConfigService_NetworkSliceSubscribeClient
+	maxRetryCount := 10
 	for {
-		if stream == nil {
+		if stream == nil && maxRetryCount > 0 {
 			status := confClient.Conn.GetState()
 			var err error
 			if status == connectivity.Ready {
@@ -171,18 +172,26 @@ func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.Netwo
 					logger.GrpcLog.Errorf("Failed to subscribe: %v", err)
 					time.Sleep(time.Second * 5)
 					// Retry on failure
+					maxRetryCount--
 					continue
 				}
 			} else if status == connectivity.Idle {
 				logger.GrpcLog.Errorf("Connectivity status idle, trying to connect again")
 				time.Sleep(time.Second * 5)
+				maxRetryCount--
 				continue
 			} else {
 				logger.GrpcLog.Errorf("Connectivity status not ready")
 				time.Sleep(time.Second * 5)
+				maxRetryCount--
 				continue
 			}
 		}
+
+		if stream == nil {
+			break
+		}
+
 		rsp, err := stream.Recv()
 		if err != nil {
 			logger.GrpcLog.Errorf("Failed to receive message: %v", err)
