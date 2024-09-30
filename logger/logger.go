@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	log     *zap.Logger
-	CfgLog  *zap.SugaredLogger
-	GrpcLog *zap.SugaredLogger
+	log         *zap.Logger
+	CfgLog      *zap.SugaredLogger
+	GrpcLog     *zap.SugaredLogger
 	atomicLevel zap.AtomicLevel
 )
 
