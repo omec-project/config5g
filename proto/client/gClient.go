@@ -132,7 +132,7 @@ var retryPolicy = `{
 
 func newClientConnection(host string) (conn *grpc.ClientConn, err error) {
 	/* get connection */
-	logger.GrpcLog.Infoln("Dial grpc connection - ", host)
+	logger.GrpcLog.Infoln("dial grpc connection:", host)
 
 	bd := 1 * time.Second
 	mltpr := 1.0
@@ -144,7 +144,7 @@ func newClientConnection(host string) (conn *grpc.ClientConn, err error) {
 	dialOptions := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithKeepaliveParams(kacp), grpc.WithDefaultServiceConfig(retryPolicy), grpc.WithConnectParams(crt)}
 	conn, err = grpc.NewClient(host, dialOptions...)
 	if err != nil {
-		logger.GrpcLog.Errorln("grpc newclient err: ", err)
+		logger.GrpcLog.Errorln("grpc newclient err:", err)
 		return nil, err
 	}
 	conn.Connect()
@@ -157,7 +157,7 @@ func (confClient *ConfigClient) GetConfigClientConn() *grpc.ClientConn {
 }
 
 func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.NetworkSliceResponse) {
-	logger.GrpcLog.Infoln("subscribeToConfigPod ")
+	logger.GrpcLog.Infoln("subscribeToConfigPod")
 	myid := os.Getenv("HOSTNAME")
 	var stream protos.ConfigService_NetworkSliceSubscribeClient
 	for {
@@ -165,27 +165,27 @@ func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.Netwo
 			status := confClient.Conn.GetState()
 			var err error
 			if status == connectivity.Ready {
-				logger.GrpcLog.Infoln("connectivity ready ")
+				logger.GrpcLog.Infoln("connectivity ready")
 				rreq := &protos.NetworkSliceRequest{RestartCounter: selfRestartCounter, ClientId: myid, MetadataRequested: confClient.MetadataRequested}
 				if stream, err = confClient.Client.NetworkSliceSubscribe(context.Background(), rreq); err != nil {
-					logger.GrpcLog.Errorf("Failed to subscribe: %v", err)
+					logger.GrpcLog.Errorf("failed to subscribe: %v", err)
 					time.Sleep(time.Second * 5)
 					// Retry on failure
 					continue
 				}
 			} else if status == connectivity.Idle {
-				logger.GrpcLog.Errorf("Connectivity status idle, trying to connect again")
+				logger.GrpcLog.Errorln("connectivity status idle, trying to connect again")
 				time.Sleep(time.Second * 5)
 				continue
 			} else {
-				logger.GrpcLog.Errorf("Connectivity status not ready")
+				logger.GrpcLog.Errorln("connectivity status not ready")
 				time.Sleep(time.Second * 5)
 				continue
 			}
 		}
 		rsp, err := stream.Recv()
 		if err != nil {
-			logger.GrpcLog.Errorf("Failed to receive message: %v", err)
+			logger.GrpcLog.Errorf("failed to receive message: %v", err)
 			// Clearing the stream will force the client to resubscribe on next iteration
 			stream = nil
 			time.Sleep(time.Second * 5)
@@ -193,27 +193,27 @@ func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.Netwo
 			continue
 		}
 
-		logger.GrpcLog.Infoln("stream msg received ")
-		logger.GrpcLog.Debugf("#Network Slices %v, RC of configpod %v ", len(rsp.NetworkSlice), rsp.RestartCounter)
+		logger.GrpcLog.Infoln("stream msg received")
+		logger.GrpcLog.Debugf("network slices %d, RC of configpod %d", len(rsp.NetworkSlice), rsp.RestartCounter)
 		if configPodRestartCounter == 0 || (configPodRestartCounter == rsp.RestartCounter) {
 			// first time connection or config update
 			configPodRestartCounter = rsp.RestartCounter
 			if len(rsp.NetworkSlice) > 0 {
 				// always carries full config copy
-				logger.GrpcLog.Infoln("First time config Received ", rsp)
+				logger.GrpcLog.Infoln("first time config received", rsp)
 				commChan <- rsp
 			} else if rsp.ConfigUpdated == 1 {
 				// config delete , all slices deleted
-				logger.GrpcLog.Infoln("Complete config deleted ")
+				logger.GrpcLog.Infoln("complete config deleted")
 				commChan <- rsp
 			}
 		} else if len(rsp.NetworkSlice) > 0 {
-			logger.GrpcLog.Errorf("Config received after config Pod restart")
+			logger.GrpcLog.Errorln("config received after config pod restart")
 			// config received after config pod restart
 			configPodRestartCounter = rsp.RestartCounter
 			commChan <- rsp
 		} else {
-			logger.GrpcLog.Errorf("Config Pod is restarted and no config received")
+			logger.GrpcLog.Errorln("config pod is restarted and no config received")
 		}
 	}
 }
