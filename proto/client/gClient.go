@@ -83,19 +83,6 @@ func (confClient *ConfigClient) PublishOnConfigChange(metadataFlag bool, stream 
 	return commChan
 }
 
-// ConfigWatcher pass structr which has configChangeUpdate interface
-func ConfigWatcher(webuiUri string, stream protos.ConfigService_NetworkSliceSubscribeClient) chan *protos.NetworkSliceResponse {
-	// TODO: use port from configmap.
-	confClient := CreateChannel(webuiUri, 10000)
-	if confClient == nil {
-		logger.GrpcLog.Errorf("create grpc channel to config pod failed")
-		return nil
-	}
-	commChan := make(chan *protos.NetworkSliceResponse)
-	go confClient.subscribeToConfigPod(commChan, stream)
-	return commChan
-}
-
 func CreateChannel(host string, timeout uint32) ConfClient {
 	logger.GrpcLog.Infoln("create config client")
 	// Second, check to see if we can reuse the gRPC connection for a new P4RT client
