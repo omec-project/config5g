@@ -157,7 +157,6 @@ func (confClient *ConfigClient) GetConfigClientConn() *grpc.ClientConn {
 func (confClient *ConfigClient) CheckGrpcConnectivity() (stream protos.ConfigService_NetworkSliceSubscribeClient, err error) {
 	logger.GrpcLog.Debugln("connectToGrpcServer")
 	myid := os.Getenv("HOSTNAME")
-	stream = nil
 	status := confClient.Conn.GetState()
 	if status == connectivity.Ready {
 		logger.GrpcLog.Debugln("connectivity ready")
@@ -181,7 +180,7 @@ func (confClient *ConfigClient) CheckGrpcConnectivity() (stream protos.ConfigSer
 func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.NetworkSliceResponse, stream protos.ConfigService_NetworkSliceSubscribeClient) {
 	rsp, err := stream.Recv()
 	if err != nil {
-		err = fmt.Errorf("failed to receive message from stream: %v", err)
+		logger.GrpcLog.Errorf("failed to receive message from stream: %v", err)
 		return
 	}
 
