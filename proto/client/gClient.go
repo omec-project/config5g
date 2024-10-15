@@ -72,8 +72,7 @@ type ConfClient interface {
 func ConnectToConfigServer(host string) (ConfClient, error) {
 	confClient := CreateConfClient(host)
 	if confClient == nil {
-		err := fmt.Errorf("create grpc channel to config pod failed")
-		return nil, err
+		return nil, fmt.Errorf("create grpc channel to config pod failed")
 	}
 	return confClient, nil
 }
@@ -84,7 +83,7 @@ func (confClient *ConfigClient) PublishOnConfigChange(metadataFlag bool, stream 
 	confClient.MetadataRequested = metadataFlag
 	commChan := make(chan *protos.NetworkSliceResponse)
 	confClient.Channel = commChan
-	logger.GrpcLog.Debugln("A communication channel is created for ConfigServer.")
+	logger.GrpcLog.Debugln("a communication channel is created for ConfigServer")
 	go confClient.subscribeToConfigPod(commChan, stream)
 	return commChan
 }
@@ -140,11 +139,10 @@ func newClientConnection(host string) (conn *grpc.ClientConn, err error) {
 	dialOptions := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithKeepaliveParams(kacp), grpc.WithDefaultServiceConfig(retryPolicy), grpc.WithConnectParams(crt)}
 	conn, err = grpc.NewClient(host, dialOptions...)
 	if err != nil {
-		err = fmt.Errorf("grpc newclient creation failed: %v", err)
-		return nil, err
+		return nil, fmt.Errorf("grpc newclient creation failed: %v", err)
 	}
 	conn.Connect()
-	return conn, err
+	return conn, nil
 }
 
 // GetConfigClientConn exposes the GRPC client connection
@@ -162,16 +160,13 @@ func (confClient *ConfigClient) CheckGrpcConnectivity() (stream protos.ConfigSer
 		logger.GrpcLog.Debugln("connectivity ready")
 		rreq := &protos.NetworkSliceRequest{RestartCounter: selfRestartCounter, ClientId: myid, MetadataRequested: confClient.MetadataRequested}
 		if stream, err = confClient.Client.NetworkSliceSubscribe(context.Background(), rreq); err != nil {
-			err = fmt.Errorf("failed to subscribe: %v", err)
-			return stream, err
+			return stream, fmt.Errorf("failed to subscribe: %v", err)
 		}
 		return stream, nil
 	} else if status == connectivity.Idle {
-		err = fmt.Errorf("connectivity status idle")
-		return nil, err
+		return nil, fmt.Errorf("connectivity status idle")
 	} else {
-		err = fmt.Errorf("connectivity status not ready")
-		return nil, err
+		return nil, fmt.Errorf("connectivity status idle")
 	}
 }
 
@@ -199,11 +194,11 @@ func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.Netwo
 			commChan <- rsp
 		}
 	} else if len(rsp.NetworkSlice) > 0 {
-		logger.GrpcLog.Errorf("config received after config pod restart")
+		logger.GrpcLog.Errorln("config received after config pod restart")
 		// config received after config pod restart
 		configPodRestartCounter = rsp.RestartCounter
 		commChan <- rsp
 	} else {
-		logger.GrpcLog.Errorf("config pod is restarted and no config received")
+		logger.GrpcLog.Errorln("config pod is restarted and no config received")
 	}
 }
