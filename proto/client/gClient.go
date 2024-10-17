@@ -56,8 +56,8 @@ type ConfClient interface {
 	// on created channel and returns the channel
 	PublishOnConfigChange(metadataRequested bool, stream protos.ConfigService_NetworkSliceSubscribeClient) chan *protos.NetworkSliceResponse
 
-	// GetConfigClientConn returns grpc connection object
-	GetConfigClientConn() *grpc.ClientConn
+	// getConfigClientConn returns grpc connection object
+	getConfigClientConn() *grpc.ClientConn
 
 	// Client Subscribing channel to ConfigPod to receive configuration
 	subscribeToConfigPod(commChan chan *protos.NetworkSliceResponse, stream protos.ConfigService_NetworkSliceSubscribeClient)
@@ -145,8 +145,8 @@ func newClientConnection(host string) (conn *grpc.ClientConn, err error) {
 	return conn, nil
 }
 
-// GetConfigClientConn exposes the GRPC client connection
-func (confClient *ConfigClient) GetConfigClientConn() *grpc.ClientConn {
+// getConfigClientConn exposes the GRPC client connection
+func (confClient *ConfigClient) getConfigClientConn() *grpc.ClientConn {
 	return confClient.Conn
 }
 
@@ -166,7 +166,7 @@ func (confClient *ConfigClient) CheckGrpcConnectivity() (stream protos.ConfigSer
 	} else if status == connectivity.Idle {
 		return nil, fmt.Errorf("connectivity status idle")
 	} else {
-		return nil, fmt.Errorf("connectivity status idle")
+		return nil, fmt.Errorf("connectivity status not ready")
 	}
 }
 
@@ -189,13 +189,12 @@ func (confClient *ConfigClient) subscribeToConfigPod(commChan chan *protos.Netwo
 			logger.GrpcLog.Infoln("first time config received", rsp)
 			commChan <- rsp
 		} else if rsp.ConfigUpdated == 1 {
-			// config delete , all slices deleted
+			// config delete, all slices deleted
 			logger.GrpcLog.Infoln("complete config deleted")
 			commChan <- rsp
 		}
 	} else if len(rsp.NetworkSlice) > 0 {
 		logger.GrpcLog.Errorln("config received after config pod restart")
-		// config received after config pod restart
 		configPodRestartCounter = rsp.RestartCounter
 		commChan <- rsp
 	} else {
