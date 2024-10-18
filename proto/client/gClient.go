@@ -56,8 +56,8 @@ type ConfClient interface {
 	// on created channel and returns the channel
 	PublishOnConfigChange(metadataRequested bool, stream protos.ConfigService_NetworkSliceSubscribeClient) chan *protos.NetworkSliceResponse
 
-	// getConfigClientConn returns grpc connection object
-	getConfigClientConn() *grpc.ClientConn
+	// GetConfigClientConn returns grpc connection object
+	GetConfigClientConn() *grpc.ClientConn
 
 	// Client Subscribing channel to ConfigPod to receive configuration
 	subscribeToConfigPod(commChan chan *protos.NetworkSliceResponse, stream protos.ConfigService_NetworkSliceSubscribeClient)
@@ -145,8 +145,8 @@ func newClientConnection(host string) (conn *grpc.ClientConn, err error) {
 	return conn, nil
 }
 
-// getConfigClientConn exposes the GRPC client connection
-func (confClient *ConfigClient) getConfigClientConn() *grpc.ClientConn {
+// GetConfigClientConn exposes the GRPC client connection
+func (confClient *ConfigClient) GetConfigClientConn() *grpc.ClientConn {
 	return confClient.Conn
 }
 
