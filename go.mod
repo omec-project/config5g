@@ -1,6 +1,6 @@
 module github.com/omec-project/config5g
 
-go 1.21
+go 1.23
 
 require (
 	go.uber.org/zap v1.27.0
