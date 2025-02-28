@@ -15,7 +15,6 @@ import (
 	protos "github.com/omec-project/config5g/proto/sdcoreConfig"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
-	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 )
@@ -64,7 +63,7 @@ type ConfClient interface {
 	sendMessagesToChannel(commChan chan *protos.NetworkSliceResponse, stream protos.ConfigService_NetworkSliceSubscribeClient)
 
 	// CheckGrpcConnectivity checks the connectivity status and returns the state of connectivity
-	CheckGrpcConnectivity() (state string)
+	CheckGrpcConnectivity() string
 
 	// SubscribeToConfigServer Subscribes to a stream of NetworkSlice
 	// It returns a stream if subscription is successful else returns nil.
@@ -155,16 +154,10 @@ func (confClient *ConfigClient) GetConfigClientConn() *grpc.ClientConn {
 }
 
 // CheckGrpcConnectivity checks the connectivity status and returns the state of connectivity
-func (confClient *ConfigClient) CheckGrpcConnectivity() (state string) {
+func (confClient *ConfigClient) CheckGrpcConnectivity() string {
 	logger.GrpcLog.Debugln("checking GRPC connectivity status")
-	status := confClient.Conn.GetState()
-	if status == connectivity.Ready {
-		return "ready"
-	} else if status == connectivity.Idle {
-		return "idle"
-	} else {
-		return "unconnected"
-	}
+	state := confClient.Conn.GetState()
+	return state.String()
 }
 
 // SubscribeToConfigServer Subscribes to a stream of NetworkSlice
