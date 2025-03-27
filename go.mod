@@ -2,10 +2,12 @@ module github.com/omec-project/config5g
 
 go 1.23.0
 
+toolchain go1.24.1
+
 require (
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.71.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.6
 )
 
 require (
