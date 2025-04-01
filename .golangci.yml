@@ -16,10 +16,12 @@ output:
 linters:
   enable:
     - asciicheck
+    - bodyclose
     - dogsled
     - goconst
     - godox
     - gomodguard
+    - govet
     - misspell
     - nakedret
     - noctx
