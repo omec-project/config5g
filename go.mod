@@ -1,6 +1,7 @@
 module github.com/omec-project/config5g
 
 go 1.24.0
+
 require (
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.71.1
